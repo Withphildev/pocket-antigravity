@@ -2,6 +2,7 @@ import { commandName, loadEnvFile } from "./common.mjs";
 import { spawn } from "node:child_process";
 
 loadEnvFile();
+loadEnvFile(".env.production");
 
 const project = process.env.PORTA_CF_PROJECT;
 if (!project) {
@@ -15,6 +16,7 @@ function run(command, args) {
       env: process.env,
       stdio: "inherit",
       windowsHide: true,
+      shell: true,
     });
 
     child.on("error", reject);

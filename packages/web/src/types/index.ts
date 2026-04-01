@@ -12,7 +12,8 @@ export interface ConversationSummary {
 
 export interface MediaAttachment {
   mimeType: string;
-  inlineData: string; // base64 encoded
+  inlineData?: string; // base64 encoded
+  fileUri?: string;    // local file reference
 }
 
 export interface Workspace {
@@ -206,6 +207,7 @@ export interface DiffLine {
 
 export interface StepItem {
   text?: string;
+  media?: MediaAttachment;
 }
 
 /** Normalized message for display */
@@ -237,4 +239,9 @@ export interface ClientSettings {
   defaultModel: string | null;
   /** Planner type used when the user hasn't explicitly picked one per-message. */
   defaultPlannerType: "conversational" | "planning";
+<<<<<<< HEAD
+=======
+  /** Visual theme preference. */
+  theme?: "light" | "dark" | "system";
+>>>>>>> develop
 }

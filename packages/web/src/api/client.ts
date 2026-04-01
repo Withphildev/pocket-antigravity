@@ -1,4 +1,43 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? "";
+const VITE_API_BASE = import.meta.env.VITE_API_BASE ?? "";
+const ENV_API_KEY = import.meta.env.VITE_API_KEY ?? "";
+
+export function getApiBase(): string {
+  try {
+    const local = localStorage.getItem("porta:api_base");
+    if (local) return local;
+  } catch {
+    // Ignore
+  }
+  return VITE_API_BASE;
+}
+
+export function getApiKey(): string {
+  try {
+    const local = localStorage.getItem("porta:api_key");
+    if (local) return local;
+  } catch {
+    // Ignore
+  }
+  return ENV_API_KEY;
+}
+
+export function setSessionApiKey(key: string) {
+  try {
+    localStorage.setItem("porta:api_key", key);
+  } catch (e) {
+    console.error("Failed to save API key:", e);
+  }
+}
+
+export function setSessionApiBase(base: string) {
+  try {
+    // Clean up trailing slash
+    const cleanBase = base.replace(/\/$/, "");
+    localStorage.setItem("porta:api_base", cleanBase);
+  } catch (e) {
+    console.error("Failed to save API base:", e);
+  }
+}
 
 function previewBody(text: string): string {
   const singleLine = text.replace(/\s+/g, " ").trim();
@@ -12,12 +51,24 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...((options.headers as Record<string, string>) ?? {}),
   };
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  const apiKey = getApiKey();
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+  }
+
+  const url = `${getApiBase()}${path}`;
+  const res = await fetch(url, {
     ...options,
     headers,
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      console.warn(`[API] 🛑 Unauthorized (401) on ${url}. Headers sent:`, {
+        "Authorization": headers["Authorization"] ? "REDACTED" : "MISSING",
+        "Content-Type": headers["Content-Type"],
+      });
+    }
     const body = await res.text();
     let msg: string;
     try {
@@ -65,6 +116,11 @@ export const api = {
       workspaceInfos?: { workspaceUri: string; gitRootUri?: string }[];
     }>("/api/workspaces"),
 
+  browse: (path?: string) =>
+    request<{ folders: { name: string; uri: string }[] }>(
+      `/api/browse?${new URLSearchParams(path ? { path } : {}).toString()}`,
+    ),
+
   startConversation: (workspaceUri?: string, fileAccessGranted = false) =>
     request<{ cascadeId: string }>("/api/conversations", {
       method: "POST",
@@ -79,7 +135,7 @@ export const api = {
     items: unknown[],
     clientMessageId?: string,
     model?: string,
-    media?: Array<{ mimeType: string; inlineData: string }>,
+    media?: import("../types").MediaAttachment[],
     plannerType?: string,
     fileAccessGranted = false,
   ) =>
@@ -132,6 +188,21 @@ export const api = {
       }),
     }),
 
+  codeAction: (
+    cascadeId: string,
+    trajectoryId: string,
+    stepIndex: number,
+    approved: boolean,
+  ) =>
+    request(`/api/conversations/${cascadeId}/code-action`, {
+      method: "POST",
+      body: JSON.stringify({
+        trajectoryId,
+        stepIndex,
+        approved,
+      }),
+    }),
+
   revert: (cascadeId: string, stepIndex: number, model?: string) =>
     request(`/api/conversations/${cascadeId}/revert`, {
       method: "POST",
@@ -171,4 +242,14 @@ export const api = {
       totalConversations: number;
       elapsedMs: number;
     }>(`/api/search?q=${encodeURIComponent(query)}`),
+
+  getWebSocketUrl: (cascadeId: string) => {
+    const base = getApiBase() || window.location.origin;
+    const isSsl = base.startsWith("https:") || window.location.protocol === "https:";
+    const prot = isSsl ? "wss" : "ws";
+    const wsBase = base.replace(/^https?:\/\//, "");
+    const url = `${prot}://${wsBase}/api/conversations/${cascadeId}/ws`;
+    const apiKey = getApiKey();
+    return apiKey ? `${url}?key=${apiKey}` : url;
+  },
 };

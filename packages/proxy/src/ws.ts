@@ -145,6 +145,7 @@ export function validateWebSocketUpgrade(
   origin: string | undefined,
   port: number,
   allowedOrigins: AllowedOrigin[] = getAllowedOrigins(),
+  apiKey?: string,
 ): UpgradeValidationResult {
   const url = new URL(reqUrl ?? "", `http://localhost:${port}`);
   const match = url.pathname.match(/^\/api\/conversations\/([^/]+)\/ws$/);
@@ -154,6 +155,18 @@ export function validateWebSocketUpgrade(
   if (!isWebSocketOriginAllowed(origin, allowedOrigins)) {
     return { ok: false, code: "forbidden_origin" };
   }
+
+  // Security: check for the API key in the query string
+  if (apiKey) {
+    const key = url.searchParams.get("key");
+    if (key !== apiKey) {
+      console.warn(`🛑 WebSocket unauthorized: incorrect API key for ${match[1]}`);
+      return { ok: false, code: "not_found" }; // return 404/not_found for slightly better obscurity
+    }
+  }
+
+
+
   return { ok: true, cascadeId: match[1] };
 }
 
@@ -161,6 +174,7 @@ export function setupWebSocket(
   server: { on: Function },
   port: number,
   allowedOrigins: AllowedOrigin[] = getAllowedOrigins(),
+  apiKey?: string,
 ): void {
   const wss = new WebSocketServer({ noServer: true });
 
@@ -170,6 +184,7 @@ export function setupWebSocket(
       req.headers.origin,
       port,
       allowedOrigins,
+      apiKey,
     );
 
     if (!upgrade.ok) {

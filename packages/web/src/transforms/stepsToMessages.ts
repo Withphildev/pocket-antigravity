@@ -1,5 +1,5 @@
 import type { ChatMessage, TrajectoryStep } from "../types";
-import { getFilePermissionRequest } from "../components/StepCards";
+import { getFilePermissionRequest } from "../utils/stepUtils";
 
 /** Extract displayable messages from raw trajectory steps */
 export function stepsToMessages(steps: TrajectoryStep[]): ChatMessage[] {
@@ -45,7 +45,12 @@ export function stepsToMessages(steps: TrajectoryStep[]): ChatMessage[] {
       const thinking = pr.thinking ?? "";
       const thinkingDuration = pr.thinkingDuration ?? "";
 
-      if (text.trim() || thinking.trim()) {
+      // Extract media from items if present
+      const media = pr.items
+        ?.filter((item) => item.media)
+        .map((item) => item.media!);
+
+      if (text.trim() || thinking.trim() || (media && media.length > 0)) {
         messages.push({
           role: "assistant",
           content: text,
@@ -53,6 +58,7 @@ export function stepsToMessages(steps: TrajectoryStep[]): ChatMessage[] {
           type,
           thinking: thinking || undefined,
           thinkingDuration: thinkingDuration || undefined,
+          media,
         });
       }
     } else if (type === "CORTEX_STEP_TYPE_RUN_COMMAND" && step.runCommand) {
@@ -190,6 +196,64 @@ export function stepsToMessages(steps: TrajectoryStep[]): ChatMessage[] {
         type,
         icon: "search",
       });
+    }
+
+    function extractMedia(step: any): any[] {
+      const textSources = [
+        step.plannerResponse?.modifiedResponse,
+        ...(step.plannerResponse?.items?.map((it: any) => it.text) ?? []),
+        step.userInput?.items?.map((it: any) => it.text).join("\n"),
+        step.runCommand?.combinedOutput?.full,
+        step.commandStatus?.combined,
+        step.output,
+      ].filter(Boolean);
+
+      const allText = textSources.join("\n");
+      const foundPaths = new Set<string>();
+
+      const fileRegex = /(?:file:\/\/\/)?([a-zA-Z]:[\\/]+[^\"\'\r\n*?<>|]+?\.(?:png|webp|jpg|jpeg))/gi;
+      let m;
+      while ((m = fileRegex.exec(allText)) !== null) {
+        foundPaths.add(m[1].trim());
+      }
+
+      return Array.from(foundPaths).map((p) => {
+        let uri = p;
+        if (!p.startsWith("file:")) {
+          uri = "file:///" + p.replace(/\\/g, "/").replace(/^\/+/, "");
+        }
+        return {
+          mimeType: "image/png",
+          fileUri: uri,
+        };
+      });
+    }
+
+    // Universal Media Extraction for any step
+    const extracted = extractMedia(step);
+    if (extracted && extracted.length > 0) {
+      // 1. Try to find an existing message from this step or related to this command
+      let targetMsg = messages.find(m => m.stepIndex === i);
+      
+      // 2. If it's a command status, find the original command message
+      if (!targetMsg && type === "CORTEX_STEP_TYPE_COMMAND_STATUS" && step.commandStatus) {
+        const cmdId = step.commandStatus.commandId;
+        targetMsg = messages.find(m => m.step?.runCommand?.commandId === cmdId);
+      }
+
+      // 3. Fallback: use the very last message created
+      if (!targetMsg) {
+        targetMsg = messages[messages.length - 1];
+      }
+
+      if (targetMsg) {
+        const currentMedia = targetMsg.media || [];
+        const existingUris = new Set(currentMedia.map((m: any) => m.fileUri).filter(Boolean));
+        const toAdd = extracted.filter(m => !existingUris.has(m.fileUri));
+        if (toAdd.length > 0) {
+          targetMsg.media = [...currentMedia, ...toAdd];
+        }
+      }
     }
   }
 

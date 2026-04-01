@@ -600,6 +600,48 @@ export function registerConversationRoutes(app: Hono): void {
     }
   });
 
+  // ── Code Action (approve/reject proposed file edits) ──
+
+  app.post("/api/conversations/:id/code-action", async (c) => {
+    const id = c.req.param("id");
+    try {
+      const body = await c.req.json();
+      const { trajectoryId, stepIndex, approved } = body;
+
+      if (!trajectoryId || stepIndex === undefined) {
+        return c.json(
+          {
+            error: "Missing required fields: trajectoryId, stepIndex",
+          },
+          400,
+        );
+      }
+
+      // Use HandleCascadeUserInteraction with codeAction field.
+      const data = await rpcForConversation(
+        "HandleCascadeUserInteraction",
+        id,
+        {
+          cascadeId: id,
+          interaction: {
+            trajectoryId,
+            stepIndex: Number(stepIndex),
+            codeAction: {
+              approved: !!approved,
+            },
+          },
+        },
+      );
+
+      // Code approval/rejection unblocks the agent — wake WS polling
+      conversationSignals.emit("activate", id);
+
+      return c.json(data);
+    } catch (err) {
+      return handleRPCError(c, err);
+    }
+  });
+
   app.post("/api/conversations/:id/revert", async (c) => {
     const id = c.req.param("id");
     try {

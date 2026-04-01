@@ -8,34 +8,9 @@ import {
   IconFileText,
   IconLock,
 } from "./Icons";
+import { basename } from "../utils/stepUtils";
+import { triggerHaptic } from "../utils/haptics";
 import type { TrajectoryStep, FilePermissionRequest } from "../types";
-
-/** Extract file basename from a URI or path */
-function basename(uriOrPath: string): string {
-  const cleaned = uriOrPath.replace(/^file:\/\//, "");
-  return cleaned.split("/").pop() ?? cleaned;
-}
-
-/**
- * Extract a filePermissionRequest from any of the tool data fields
- * where the LS may embed it, or from the step's top-level field.
- *
- * The LS embeds filePermissionRequest in 6 step types:
- * CodeAction, ViewFile, ListDirectory, GrepSearch, ViewFileOutline, ViewCodeItem.
- */
-export function getFilePermissionRequest(
-  step: TrajectoryStep,
-): FilePermissionRequest | undefined {
-  return (
-    step.filePermissionRequest ??
-    step.viewFile?.filePermissionRequest ??
-    step.listDirectory?.filePermissionRequest ??
-    step.codeAction?.filePermissionRequest ??
-    step.grepSearch?.filePermissionRequest ??
-    step.viewFileOutline?.filePermissionRequest ??
-    step.viewCodeItem?.filePermissionRequest
-  );
-}
 
 /** Inline copy button for step cards */
 function StepCopyBtn({ text }: { text: string }) {
@@ -92,6 +67,7 @@ export function FilePermissionCard({
   const isDir = permissionRequest.isDirectory ?? false;
 
   const handleResponse = (allow: boolean, scope: number) => {
+    triggerHaptic(allow ? "success" : "light");
     setResponded(true);
     onFilePermission(trajectoryId, stepIndex, allow, scope, path);
   };
@@ -129,14 +105,16 @@ export function FilePermissionCard({
           <button
             className="approve-btn file-permission-btn allow-once"
             onClick={() => handleResponse(true, PERMISSION_SCOPE_ONCE)}
+            aria-label="Allow access for this operation only"
           >
             Allow Once
           </button>
           <button
             className="approve-btn file-permission-btn allow-conversation"
             onClick={() => handleResponse(true, PERMISSION_SCOPE_CONVERSATION)}
+            aria-label="Allow access for the entire conversation"
           >
-            Allow This Conversation
+            Allow Conversation
           </button>
         </div>
       )}
@@ -153,15 +131,21 @@ interface CommandCardProps {
     stepIndex: number,
     approved: boolean,
   ) => Promise<void>;
+  isWaiting?: boolean;
 }
 
-export function CommandCard({ step, onCommandAction }: CommandCardProps) {
+export function CommandCard({
+  step,
+  onCommandAction,
+  isWaiting: isWaitingProp,
+}: CommandCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [responded, setResponded] = useState(false);
   const cmd = step.runCommand;
   if (!cmd) return null;
 
-  const isWaiting = step.status === "CORTEX_STEP_STATUS_WAITING";
+  const isWaiting =
+    isWaitingProp ?? step.status === "CORTEX_STEP_STATUS_WAITING";
   // When waiting for approval, show the proposed command; otherwise show executed
   const command = isWaiting
     ? (cmd.proposedCommandLine ?? cmd.commandLine ?? cmd.command ?? "")
@@ -184,6 +168,7 @@ export function CommandCard({ step, onCommandAction }: CommandCardProps) {
 
   const handleAction = async (approved: boolean) => {
     if (!onCommandAction) return;
+    triggerHaptic(approved ? "success" : "light");
     setResponded(true);
     try {
       await onCommandAction(trajectoryId, stepIndex, approved);
@@ -221,20 +206,39 @@ export function CommandCard({ step, onCommandAction }: CommandCardProps) {
             <button
               className="approve-btn command-action-btn reject"
               onClick={() => handleAction(false)}
+              aria-label="Reject command execution"
             >
               Reject
             </button>
             <button
               className="approve-btn command-action-btn approve"
               onClick={() => handleAction(true)}
+              aria-label="Accept and run command"
             >
-              Approve
+              Accept
             </button>
           </div>
         </div>
       )}
       {expanded && output && <pre className="step-card-output">{output}</pre>}
-      <StepCopyBtn text={output ? `$ ${command}\n${output}` : `$ ${command}`} />
+      <div className="command-footer">
+        <div className="command-status-badge">
+          {isWaiting ? "Running..." : exitCode === 0 ? "Success" : "Failed"}
+        </div>
+        <div className="step-card-actions-row">
+          <button 
+            className="msg-action-btn" 
+            title="Copy command"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigator.clipboard.writeText(command);
+            }}
+          >
+            <IconCopy size={12} />
+          </button>
+          <StepCopyBtn text={output ? `$ ${command}\n${output}` : `$ ${command}`} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -243,6 +247,12 @@ export function CommandCard({ step, onCommandAction }: CommandCardProps) {
 
 interface CodeActionCardProps {
   step: TrajectoryStep;
+  onCodeAction?: (
+    trajectoryId: string,
+    stepIndex: number,
+    approved: boolean,
+  ) => Promise<void>;
+  isWaiting?: boolean;
 }
 
 /** Diff line types from the LS proto */
@@ -271,10 +281,33 @@ function diffLineClass(type: DiffLineType): string {
   return "";
 }
 
-export function CodeActionCard({ step }: CodeActionCardProps) {
+export function CodeActionCard({
+  step,
+  onCodeAction,
+  isWaiting: isWaitingProp,
+}: CodeActionCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [responded, setResponded] = useState(false);
   const ca = step.codeAction;
   if (!ca) return null;
+
+  const isWaiting =
+    isWaitingProp ?? step.status === "CORTEX_STEP_STATUS_WAITING";
+  const trajectoryId =
+    step.metadata?.sourceTrajectoryStepInfo?.trajectoryId ?? "";
+  const stepIndex = step.metadata?.sourceTrajectoryStepInfo?.stepIndex ?? 0;
+
+  const handleAction = async (approved: boolean) => {
+    if (!onCodeAction) return;
+    triggerHaptic(approved ? "success" : "light");
+    setResponded(true);
+    try {
+      await onCodeAction(trajectoryId, stepIndex, approved);
+    } catch {
+      // Request failed — restore buttons so user can retry
+      setResponded(false);
+    }
+  };
 
   const toolName = step.metadata?.toolCall?.name ?? "";
 
@@ -303,7 +336,9 @@ export function CodeActionCard({ step }: CodeActionCardProps) {
   ).length;
 
   return (
-    <div className="chat-block step-card code-card">
+    <div
+      className={`chat-block step-card code-card ${isWaiting ? "cmd-wait" : ""}`}
+    >
       <button
         className="step-card-header"
         onClick={() => hasDiff && setExpanded((v) => !v)}
@@ -322,6 +357,38 @@ export function CodeActionCard({ step }: CodeActionCardProps) {
           </span>
         )}
       </button>
+
+      {isWaiting && !responded && onCodeAction && (
+        <div className="command-action-bar">
+          <span className="command-waiting-label">
+            <span className="waiting-dot" />
+            Waiting for approval
+          </span>
+          <div className="command-action-buttons">
+            <button
+              className="command-action-btn reject"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAction(false);
+              }}
+              aria-label="Reject code changes"
+            >
+              Reject
+            </button>
+            <button
+              className="command-action-btn approve"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAction(true);
+              }}
+              aria-label="Accept and apply code changes"
+            >
+              Accept
+            </button>
+          </div>
+        </div>
+      )}
+
       {expanded && hasDiff && (
         <div className="step-card-diff">
           {fileUri && (

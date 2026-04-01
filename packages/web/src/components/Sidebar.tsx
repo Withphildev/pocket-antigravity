@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { slugFromUri } from "../hooks/useWorkspaces";
 import type { ConversationEntry } from "../hooks/useConversations";
 import { api } from "../api/client";
 import {
@@ -9,7 +10,13 @@ import {
   IconX,
   IconSpinner,
   IconGear,
+<<<<<<< HEAD
+=======
+  IconLock,
+  IconFolder,
+>>>>>>> develop
 } from "./Icons";
+import { setSessionApiKey, setSessionApiBase, getApiBase } from "../api/client";
 
 interface Props {
   conversations: ConversationEntry[];
@@ -22,6 +29,10 @@ interface Props {
   connected: boolean;
   isOpen: boolean;
   onToggle: () => void;
+  openUnlock?: boolean;
+  onUnlockOpenChange?: (open: boolean) => void;
+  workspaces?: { uri: string; name: string }[];
+  onSelectWorkspace?: (slug: string) => void;
 }
 
 interface WorkspaceGroup {
@@ -100,6 +111,7 @@ interface SidebarAction {
   label: string;
   onClick: () => void;
   active?: boolean;
+  className?: string;
 }
 
 export function Sidebar({
@@ -113,11 +125,56 @@ export function Sidebar({
   connected,
   isOpen,
   onToggle,
+  openUnlock,
+  onUnlockOpenChange,
+  workspaces = [],
+  onSelectWorkspace,
 }: Props) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [workspaceDropdownOpen, setWorkspaceDropdownOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [unlockOpen, setUnlockOpenState] = useState(false);
+  const [bridgeUrl, setBridgeUrl] = useState(getApiBase());
+
+  const setUnlockOpen = useCallback((open: boolean) => {
+    setUnlockOpenState(open);
+    if (open) setBridgeUrl(getApiBase());
+    onUnlockOpenChange?.(open);
+  }, [onUnlockOpenChange]);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    if (!workspaceDropdownOpen) return;
+    const handler = () => setWorkspaceDropdownOpen(false);
+    window.addEventListener("click", handler);
+    return () => window.removeEventListener("click", handler);
+  }, [workspaceDropdownOpen]);
+
+  // Sync with prop
+  useEffect(() => {
+    if (openUnlock !== undefined && openUnlock !== unlockOpen) {
+      setUnlockOpenState(openUnlock);
+    }
+  }, [openUnlock, unlockOpen]);
+
+  // Listen for global events
+  useEffect(() => {
+    const unlockHandler = () => setUnlockOpen(true);
+    const workspaceHandler = () => {
+      setWorkspaceDropdownOpen(true);
+      if (!isOpen) onToggle(); // Open sidebar if closed
+    };
+    
+    window.addEventListener("porta:open-unlock", unlockHandler);
+    window.addEventListener("porta:open-workspaces", workspaceHandler);
+    
+    return () => {
+      window.removeEventListener("porta:open-unlock", unlockHandler);
+      window.removeEventListener("porta:open-workspaces", workspaceHandler);
+    };
+  }, [setUnlockOpen, onToggle, isOpen]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<
     | {
@@ -144,8 +201,13 @@ export function Sidebar({
       map.set(name, list);
     }
 
+    for (const ws of workspaces) {
+      if (!map.has(ws.name)) {
+        map.set(ws.name, []);
+      }
+    }
+
     return Array.from(map.entries())
-      .filter(([name]) => name !== "Others") // Hide workspace-less conversations
       .map(([name, convs]) => {
         // Sort within group: running first, then by lastModifiedTime desc
         convs.sort((a, b) => {
@@ -203,6 +265,15 @@ export function Sidebar({
       },
     },
     { icon: <IconGear size={14} />, label: "Settings", onClick: onSettings },
+<<<<<<< HEAD
+=======
+    { 
+      icon: <IconLock size={14} />, 
+      label: "Unlock", 
+      className: "unlock-btn",
+      onClick: () => setUnlockOpen(true) 
+    },
+>>>>>>> develop
   ];
 
   // Debounced search
@@ -356,12 +427,38 @@ export function Sidebar({
     <aside className="sidebar">
       {/* Header: brand + collapse */}
       <div className="sidebar-header">
-        <span
-          className="sidebar-brand"
-          title={connected ? "Connected" : "Disconnected"}
-        >
-          Porta
-        </span>
+        <div className="sidebar-project-select" onClick={(e) => {
+          e.stopPropagation();
+          setWorkspaceDropdownOpen(!workspaceDropdownOpen);
+        }}>
+          <span
+            className="sidebar-brand"
+            title={connected ? "Connected" : "Disconnected"}
+          >
+            Pocket Antigravity
+          </span>
+          {workspaces.length > 0 && <span className="sidebar-brand-caret">▾</span>}
+        </div>
+        {workspaceDropdownOpen && (
+          <div className="sidebar-dropdown">
+            <div className="sidebar-dropdown-header">Workspaces</div>
+            {workspaces.map((ws) => (
+              <button
+                key={ws.uri}
+                className="sidebar-dropdown-item"
+                onClick={() => {
+                  if (onSelectWorkspace) onSelectWorkspace(slugFromUri(ws.uri));
+                  setWorkspaceDropdownOpen(false);
+                }}
+              >
+                <span className="sidebar-dropdown-icon">
+                  <IconFolder size={13} />
+                </span>
+                <span className="sidebar-dropdown-label">{ws.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
         <button
           className="sidebar-icon-btn"
           onClick={onToggle}
@@ -376,8 +473,9 @@ export function Sidebar({
         {actions.map((action, i) => (
           <button
             key={i}
-            className={`sidebar-action-btn ${action.active ? "active" : ""}`}
+            className={`sidebar-action-btn ${action.active ? "active" : ""} ${action.className ?? ""}`}
             onClick={action.onClick}
+            title={action.label}
           >
             <span className="sidebar-action-icon">{action.icon}</span>
             <span className="sidebar-action-label">{action.label}</span>
@@ -414,7 +512,11 @@ export function Sidebar({
                   >
                     ▾
                   </span>
-                  <span className="workspace-group-name">{group.name}</span>
+                  <span className="workspace-group-name" onClick={(e) => {
+                    e.stopPropagation();
+                    const ws = workspaces.find(w => w.name === group.name);
+                    if (ws && onSelectWorkspace) onSelectWorkspace(slugFromUri(ws.uri));
+                  }} title="Select project">{group.name}</span>
                   <span className="workspace-group-count">{totalCount}</span>
                 </button>
 
@@ -501,6 +603,91 @@ export function Sidebar({
                   </button>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unlock Modal */}
+      {unlockOpen && (
+        <div className="auth-overlay" onClick={() => setUnlockOpen(false)}>
+          <div
+            className="auth-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="modal-close-btn"
+              onClick={() => setUnlockOpen(false)}
+              aria-label="Close"
+            >
+              <IconX size={20} />
+            </button>
+
+            <div className="auth-header">
+              <div className="auth-icon">
+                <IconLock />
+              </div>
+              <h3 className="auth-title">Unlock Pocket Antigravity</h3>
+              <p className="auth-desc">
+                Enter your API Key to access your local Antigravity instance.
+              </p>
+            </div>
+            
+            <div className="auth-input-group" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "12px", opacity: 0.6, marginLeft: "4px" }}>Bridge URL</label>
+                <input
+                  className="auth-input"
+                  type="text"
+                  placeholder="http://localhost:3170"
+                  value={bridgeUrl}
+                  onChange={(e) => setBridgeUrl(e.target.value)}
+                />
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <label style={{ fontSize: "12px", opacity: 0.6, marginLeft: "4px" }}>API Key</label>
+                <input
+                  className="auth-input"
+                  type="password"
+                  placeholder="Paste API key here..."
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const key = (e.target as HTMLInputElement).value;
+                      if (key) setSessionApiKey(key);
+                      setSessionApiBase(bridgeUrl);
+                      setUnlockOpen(false);
+                      window.location.reload();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
+              <button
+                className="auth-submit"
+                onClick={(e) => {
+                  const modal = e.currentTarget.closest(".auth-modal");
+                  const keyInput = modal?.querySelector('input[type="password"]') as HTMLInputElement;
+                  if (keyInput?.value) {
+                    setSessionApiKey(keyInput.value);
+                    setSessionApiBase(bridgeUrl);
+                    setUnlockOpen(false);
+                    window.location.reload();
+                  }
+                }}
+              >
+                Authorize & Connect Bridge
+              </button>
+              
+              <button
+                className="settings-reset-btn"
+                style={{ padding: "12px", marginTop: "0", width: "100%" }}
+                onClick={() => setUnlockOpen(false)}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

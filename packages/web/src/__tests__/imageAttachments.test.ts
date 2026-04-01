@@ -19,7 +19,7 @@ describe("imageAttachments", () => {
 
     expect(prepared.mimeType).toBe("image/svg+xml");
     expect(prepared.bytes).toBe(file.size);
-    expect(prepared.inlineData.length).toBeGreaterThan(0);
+    expect(prepared.inlineData?.length).toBeGreaterThan(0);
   });
 
   it("rejects oversized svg files", async () => {

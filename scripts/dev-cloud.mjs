@@ -27,7 +27,7 @@ const runners = [
   spawnLoggedProcess(
     "tunnel",
     "cloudflared",
-    ["tunnel", "run", tunnelName],
+    ["tunnel", "--url", "http://127.0.0.1:3170", "run", tunnelName],
     path.join(logsDir, "tunnel.log"),
   ),
 ];

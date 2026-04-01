@@ -1,8 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { ModelSelector } from "./ModelSelector";
 import { IconPaperclip } from "./Icons";
+import { VoiceInput } from "./VoiceInput";
 import type { MediaAttachment } from "../types";
 import { prepareAttachments } from "../utils/imageAttachments";
+import { triggerHaptic } from "../utils/haptics";
 import { DEFAULT_MODEL } from "../constants";
 const ALLOWED_TYPES = [
   "image/png",
@@ -30,6 +32,11 @@ interface Props {
   defaultModel?: string | null;
   /** Default planner type from client settings. */
   defaultPlannerType?: PlannerType;
+<<<<<<< HEAD
+=======
+  /** Active workspace folder name for context visualization. */
+  workspacePath?: string;
+>>>>>>> develop
 }
 
 interface AttachmentPreview {
@@ -110,6 +117,10 @@ export function ChatInput({
   onDraftChange,
   defaultModel,
   defaultPlannerType,
+<<<<<<< HEAD
+=======
+  workspacePath,
+>>>>>>> develop
 }: Props) {
   const effectiveDefault = defaultModel ?? DEFAULT_MODEL;
   const [model, setModel] = useState<string | null>(effectiveDefault);
@@ -188,6 +199,7 @@ export function ChatInput({
       }
 
       onSend(trimmed || " ", model, media, plannerType);
+      triggerHaptic("light");
       onDraftChange("");
       attachments.forEach((attachment) => {
         URL.revokeObjectURL(attachment.dataUrl);
@@ -231,6 +243,12 @@ export function ChatInput({
     const el = e.target;
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 200) + "px";
+  };
+
+  const handleTranscript = (text: string) => {
+    const space = draft.trim() ? " " : "";
+    onDraftChange(draft + space + text);
+    textareaRef.current?.focus();
   };
 
   // Paste handler for images
@@ -331,6 +349,12 @@ export function ChatInput({
           }
         }}
       >
+        {workspacePath && (
+          <div className="chat-input-context">
+            <span className="context-dot" />
+            <span className="context-label">{workspacePath}</span>
+          </div>
+        )}
         <div className="chat-input-top">
           <textarea
             ref={textareaRef}
@@ -355,6 +379,11 @@ export function ChatInput({
             >
               <IconPaperclip size={18} />
             </button>
+            <VoiceInput
+              className="chat-action-icon-btn"
+              onTranscript={handleTranscript}
+              disabled={inputDisabled}
+            />
             <input
               ref={fileInputRef}
               type="file"

@@ -18,7 +18,7 @@ const runners = [
   spawnLoggedProcess(
     "web",
     commandName("pnpm"),
-    ["--filter", "@porta/web", "dev"],
+    ["--filter", "@porta/web", "dev", "--host"],
     path.join(logsDir, "web.log"),
   ),
 ];

@@ -3,6 +3,11 @@
 .step-card {
   position: relative;
   overflow: hidden;
+  background: var(--glass-bg-elevated);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
 }
 
 .step-copy-btn {
@@ -25,9 +30,15 @@
 }
 
 .step-card.cmd-wait {
-  background: rgb(var(--c-accent) / 0.06);
-  border-color: rgb(var(--c-accent) / 0.4);
-  box-shadow: 0 0 0 1px rgb(var(--c-accent) / 0.2) inset;
+  background: rgb(var(--c-accent) / 0.08);
+  border-color: rgb(var(--c-accent) / 0.5);
+  box-shadow: 0 0 12px rgb(var(--c-accent) / 0.1) inset;
+  animation: card-wait-pulse 2s ease-in-out infinite;
+}
+
+@keyframes card-wait-pulse {
+  0%, 100% { border-color: rgb(var(--c-accent) / 0.4); box-shadow: 0 0 8px rgb(var(--c-accent) / 0.05) inset; }
+  50%      { border-color: rgb(var(--c-accent) / 0.8); box-shadow: 0 0 16px rgb(var(--c-accent) / 0.15) inset; }
 }
 
 .step-card-header {
@@ -76,8 +87,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  background: var(--bg-surface);
-  border-top: 1px solid var(--border-subtle);
+  background: rgba(var(--c-bg-surface), 0.3);
+  border-top: 1px solid var(--glass-border);
 }
 
 .step-card-warning {
@@ -88,20 +99,27 @@
 .approve-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
   background: var(--accent);
   color: var(--text-on-solid);
-  font-size: 12.5px;
-  font-weight: 500;
-  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: background var(--transition-fast);
+  transition: all var(--transition-fast);
+  min-height: 38px; /* Better touch target */
 }
 
 .approve-btn:hover {
   background: var(--accent-hover);
+  transform: translateY(-1px);
+}
+
+.approve-btn:active {
+  transform: translateY(0);
 }
 
 /* ── File Permission Card ── */
@@ -117,35 +135,35 @@
 .file-permission-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-end;
-  padding: 10px 14px;
-  background: var(--bg-surface);
-  border-top: 1px solid var(--border-subtle);
+  gap: 10px;
+  justify-content: stretch;
+  padding: 12px;
+  background: rgba(var(--c-bg-surface), 0.3);
+  border-top: 1px solid var(--glass-border);
 }
 
 .file-permission-btn {
-  font-size: 12px;
-  padding: 6px 14px;
-  border-radius: var(--radius-sm);
-  font-weight: 500;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
   border: 1px solid var(--border-default);
   cursor: pointer;
-  transition:
-    background var(--transition-fast),
-    border-color var(--transition-fast),
-    color var(--transition-fast);
+  transition: all var(--transition-fast);
+  min-height: 38px;
+  flex: 1; /* Allow buttons to grow equally */
+  min-width: fit-content;
 }
 
 .file-permission-btn.deny {
   background: transparent;
   color: rgb(var(--c-error));
-  border-color: rgb(var(--c-error) / 0.3);
+  border-color: rgb(var(--c-error) / 0.4);
 }
 
 .file-permission-btn.deny:hover {
   background: rgb(var(--c-error) / 0.1);
-  border-color: rgb(var(--c-error) / 0.5);
+  border-color: rgb(var(--c-error) / 0.6);
 }
 
 .file-permission-btn.allow-once {
@@ -176,8 +194,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 12px;
   background: var(--bg-surface);
   border-top: 1px solid var(--border-subtle);
 }
@@ -212,40 +231,39 @@
 }
 
 .command-action-btn {
-  font-size: 12px;
-  padding: 6px 14px;
-  border-radius: var(--radius-sm);
-  font-weight: 500;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
   border: 1px solid var(--border-default);
   cursor: pointer;
-  transition:
-    background var(--transition-fast),
-    border-color var(--transition-fast),
-    color var(--transition-fast),
-    box-shadow var(--transition-fast);
+  transition: all var(--transition-fast);
+  min-height: 38px;
+  min-width: 80px;
 }
 
 .command-action-btn.reject {
   background: transparent;
   color: rgb(var(--c-error));
-  border-color: rgb(var(--c-error) / 0.3);
+  border-color: rgb(var(--c-error) / 0.4);
 }
 
 .command-action-btn.reject:hover {
   background: rgb(var(--c-error) / 0.1);
-  border-color: rgb(var(--c-error) / 0.5);
+  border-color: rgb(var(--c-error) / 0.6);
 }
 
 .command-action-btn.approve {
-  background: rgb(var(--c-success) / 0.12);
+  background: rgb(var(--c-success) / 0.15);
   color: rgb(var(--c-success));
-  border-color: rgb(var(--c-success) / 0.3);
+  border-color: rgb(var(--c-success) / 0.4);
 }
 
 .command-action-btn.approve:hover {
-  background: rgb(var(--c-success) / 0.2);
-  border-color: rgb(var(--c-success) / 0.5);
-  box-shadow: 0 1px 8px rgb(var(--c-success) / 0.15);
+  background: rgb(var(--c-success) / 0.25);
+  border-color: rgb(var(--c-success) / 0.6);
+  box-shadow: 0 2px 10px rgb(var(--c-success) / 0.2);
+  transform: translateY(-1px);
 }
 
 .step-card-file {
@@ -425,8 +443,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.75); /* Opaque enough without expensive blur */
-  animation: modal-fade-in 0.2s ease-out;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  animation: modal-fade-in 0.25s ease-out;
 }
 
 @keyframes modal-fade-in {
@@ -439,15 +459,17 @@
 }
 
 .modal-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
+  background: rgba(var(--c-bg-surface), 0.85);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   padding: 32px;
   max-width: 420px;
   width: 90vw;
   text-align: center;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  animation: modal-slide-up 0.25s ease-out;
+  box-shadow: var(--shadow-glass);
+  animation: modal-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes modal-slide-up {

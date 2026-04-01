@@ -1,4 +1,4 @@
-# Contributing to Porta
+# Contributing to Pocket Antigravity
 
 Thanks for your interest in contributing! This document covers the
 workflow, conventions, and policies you need to know.
@@ -64,7 +64,7 @@ git push origin develop
 
 ## Versioning
 
-Porta follows [Semantic Versioning](https://semver.org/):
+Pocket Antigravity follows [Semantic Versioning](https://semver.org/):
 
 | Bump    | When                                                   |
 | ------- | ------------------------------------------------------ |
