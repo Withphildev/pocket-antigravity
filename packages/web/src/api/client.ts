@@ -202,7 +202,6 @@ export const api = {
         approved,
       }),
     }),
-
   revert: (cascadeId: string, stepIndex: number, model?: string) =>
     request(`/api/conversations/${cascadeId}/revert`, {
       method: "POST",

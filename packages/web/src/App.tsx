@@ -238,7 +238,6 @@ function ChatView() {
     },
     [activeId, refresh, triggerSoftRefresh],
   );
-
   // ── Navigate helpers ──
   const handleNew = useCallback(() => {
     navigate(`/${projectSlug ?? "unknown"}`);
