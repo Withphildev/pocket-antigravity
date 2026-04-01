@@ -13,14 +13,14 @@ import { ChatPanel } from "./components/ChatPanel";
 import { ChatInput } from "./components/ChatInput";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { WorkspaceSelector } from "./components/WorkspaceSelector";
-import { IconFolder } from "./components/Icons";
+import { IconFolder, IconLock } from "./components/Icons";
 import { useConversations } from "./hooks/useConversations";
 import { usePolling } from "./hooks/usePolling";
 import { useWorkspaces, slugFromUri } from "./hooks/useWorkspaces";
 import { useDraftText } from "./hooks/useDraftText";
 import { useChatActions } from "./hooks/useChatActions";
 import { useClientSettings } from "./hooks/useClientSettings";
-import { api } from "./api/client";
+import { api, setSessionApiKey } from "./api/client";
 import { isUnconfirmedOptimisticMessage } from "./utils/optimisticMessages";
 import type { HealthResponse, MediaAttachment } from "./types";
 import type { PlannerType } from "./components/ChatInput";
@@ -76,8 +76,20 @@ function ChatView() {
   const activeId = chatId ?? null;
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 480);
   const isMobile = () => window.innerWidth <= 480;
-  const { conversations, loading, refresh } = useConversations(15_000);
+  const { conversations, loading, refresh, error: convError } = useConversations(15_000);
   const { data: health } = usePolling<HealthResponse>(api.health, 30_000);
+  
+  const [isLocked, setIsLocked] = useState(false);
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  
+  useEffect(() => {
+    const errorIsAuth = convError?.includes("401") || convError?.toLowerCase().includes("unauthorized");
+    if (errorIsAuth && !isLocked) {
+      // Re-locking on error can be annoying if they dismissed it once.
+      // We'll only auto-lock if they haven't explicitly dismissed it or if it's the first time.
+      setIsLocked(true);
+    }
+  }, [convError]); // Removed isLocked from dependencies to break the immediate flip-loop
 
   // ── Hooks ──
   const { workspaces, currentWorkspaceUri } = useWorkspaces(
@@ -90,6 +102,17 @@ function ChatView() {
   const activeConv = conversations.find((c) => c.id === activeId);
   const isRunning = activeConv?.summary.status === "CASCADE_RUN_STATUS_RUNNING";
   const connected = !!health && health.languageServers.length > 0;
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove("light-mode", "dark-mode");
+    if (settings.theme === "light") {
+      root.classList.add("light-mode");
+    } else if (settings.theme === "dark") {
+      root.classList.add("dark-mode");
+    }
+    // If "system", no classes added and CSS uses @media (prefers-color-scheme)
+  }, [settings.theme]);
 
   const {
     optimisticMessages,
@@ -191,6 +214,31 @@ function ChatView() {
     [activeId, refresh, triggerSoftRefresh],
   );
 
+  // ── Code action (approve/reject proposed file edit) ──
+  const handleCodeAction = useCallback(
+    async (
+      trajectoryId: string,
+      stepIndex: number,
+      approved: boolean,
+    ) => {
+      if (!activeId) return;
+      try {
+        await api.codeAction(
+          activeId,
+          trajectoryId,
+          stepIndex,
+          approved,
+        );
+        triggerSoftRefresh();
+        refresh();
+      } catch (err) {
+        console.error("Failed to respond to code action:", err);
+        throw err; // Propagate so CodeActionCard can restore buttons
+      }
+    },
+    [activeId, refresh, triggerSoftRefresh],
+  );
+
   // ── Navigate helpers ──
   const handleNew = useCallback(() => {
     navigate(`/${projectSlug ?? "unknown"}`);
@@ -259,6 +307,14 @@ function ChatView() {
         connected={connected}
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
+        openUnlock={showUnlockModal}
+        onUnlockOpenChange={setShowUnlockModal}
+        workspaces={workspaces}
+        onSelectWorkspace={(slug) => {
+          navigate(`/${slug}`);
+          setOptimisticMessages([]);
+          if (isMobile()) setSidebarOpen(false);
+        }}
       />
       {/* Mobile backdrop: tap to close sidebar */}
       {sidebarOpen && (
@@ -271,7 +327,15 @@ function ChatView() {
         <ChatHeader
           title={headerTitle}
           projectName={projectSlug ?? undefined}
+          isBusy={isRunning}
+          path={currentWorkspaceUri?.split("/").pop() ?? undefined}
           onMenuToggle={() => setSidebarOpen(true)}
+          workspaces={workspaces}
+          onSelectWorkspace={(slug) => {
+            navigate(`/${slug}`);
+            setOptimisticMessages([]);
+          }}
+          currentWorkspaceUri={currentWorkspaceUri}
         />
         {isSettingsPage ? (
           <SettingsPanel
@@ -286,6 +350,7 @@ function ChatView() {
             onRevert={handleRevert}
             onFilePermission={handleFilePermission}
             onCommandAction={handleCommandAction}
+            onCodeAction={handleCodeAction}
             onConfirmOptimistic={confirmOptimisticMessages}
             optimisticMessages={optimisticMessages}
             refreshKey={stepsRefreshKey}
@@ -366,7 +431,23 @@ function ChatView() {
                     />
                   </svg>
                 </div>
-                <div className="chat-empty-text">Start a conversation</div>
+                <div className="chat-empty-text">What can I help you build?</div>
+                <div className="chat-empty-suggestions">
+                  {[
+                    "Research a technical topic",
+                    "Write a feature proposal",
+                    "Analyze a code bug",
+                    "Plan a project architecture",
+                  ].map((p) => (
+                    <button
+                      key={p}
+                      className="chat-empty-suggestion-chip"
+                      onClick={() => handleSend(p, settings.defaultModel)}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
                 {workspaces.length > 0 && currentWorkspaceUri ? (
                   <WorkspaceSelector
                     workspaces={workspaces}
@@ -390,14 +471,77 @@ function ChatView() {
             onSend={handleSend}
             onStop={handleStop}
             isRunning={isRunning}
-            disabled={!connected}
+            disabled={!connected || isLocked}
             draft={draftText}
             onDraftChange={handleDraftChange}
             defaultModel={settings.defaultModel}
             defaultPlannerType={settings.defaultPlannerType}
+            workspacePath={currentWorkspaceUri?.split("/").pop() ?? undefined}
           />
         )}
       </div>
+
+      {isLocked && (
+        <div className="auth-overlay">
+          <div className="auth-modal">
+            <div className="auth-header">
+              <div className="auth-icon">
+                <IconLock />
+              </div>
+              <h1 className="auth-title">Connection Locked</h1>
+              <p className="auth-desc">
+                Your mobile device is not authorized to access this Porta bridge.
+                Please enter the API key configured on your local machine.
+              </p>
+            </div>
+            
+            <div className="auth-input-group">
+              <div className="auth-label">API Key</div>
+              <input
+                className="auth-input"
+                type="password"
+                placeholder="Paste pk-xxxx here..."
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const val = (e.target as HTMLInputElement).value.trim();
+                    if (val) {
+                      setSessionApiKey(val);
+                      setIsLocked(false);
+                      triggerSoftRefresh();
+                    }
+                  }
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%", marginTop: "12px" }}>
+              <button 
+                className="auth-submit"
+                onClick={(e) => {
+                  const input = (e.currentTarget.parentElement?.previousElementSibling?.querySelector("input") as HTMLInputElement);
+                  const val = input?.value.trim();
+                  if (val) {
+                    setSessionApiKey(val);
+                    setIsLocked(false);
+                    triggerSoftRefresh();
+                  }
+                }}
+              >
+                Authorize Connection
+              </button>
+              
+              <button 
+                className="settings-reset-btn"
+                style={{ padding: "12px", marginTop: "0", width: "100%" }}
+                onClick={() => setIsLocked(false)}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -29,6 +29,13 @@ const HOST = resolveProxyHost();
 
 assertSupportedListenHost(HOST, process.env);
 
+const API_KEY = process.env.PORTA_API_KEY;
+if (API_KEY) {
+  console.log("🔒 API Key protection enabled");
+} else {
+  console.warn("⚠️ API Key protection is DISABLED. Set PORTA_API_KEY in .env");
+}
+
 const app = new Hono();
 
 // ── Middleware ──
@@ -41,6 +48,25 @@ app.use(
     origin: (origin) => resolveCorsOrigin(origin, ALLOWED_ORIGINS),
   }),
 );
+
+// ── Auth Middleware ──
+
+app.use("/api/*", async (c, next) => {
+  if (!API_KEY) return next();
+
+  const auth = c.req.header("Authorization") || c.req.query("key");
+
+  // Diagnostic log (temporary)
+  console.log(`🔐 Auth check: Recv [${auth}] | Expected [${API_KEY}]`);
+
+  if (auth === API_KEY || auth === `Bearer ${API_KEY}`) {
+    return next();
+  }
+
+  const clientIp = c.req.header("x-forwarded-for") || "unknown";
+  console.warn(`🛑 Unauthorized access attempt from ${clientIp}`);
+  return c.json({ error: "Unauthorized" }, 401);
+});
 
 // ── Health ──
 
@@ -63,7 +89,7 @@ app.get("/api/health", async (c) => {
 registerConversationRoutes(app);
 registerModelRoutes(app);
 registerWorkspaceRoutes(app);
-registerFileRoutes(app);
+registerFileRoutes(app, discovery);
 registerSearchRoutes(app);
 registerRpcPassthroughRoutes(app);
 
@@ -75,7 +101,7 @@ console.log(`🚀 Porta proxy starting on ${listenAddress}`);
 
 const server = createAdaptorServer({ fetch: app.fetch, port: PORT });
 
-setupWebSocket(server, PORT, ALLOWED_ORIGINS);
+setupWebSocket(server, PORT, ALLOWED_ORIGINS, API_KEY);
 
 void discovery
   .getInstances()

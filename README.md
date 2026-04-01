@@ -1,4 +1,4 @@
-# Porta
+# Pocket Antigravity
 
 [![CI](https://github.com/L1M80/porta/actions/workflows/ci.yml/badge.svg)](https://github.com/L1M80/porta/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -7,7 +7,7 @@
 Remote web interface for [Antigravity](https://antigravity.google/) Agent Manager.  
 Access your local Antigravity sessions from your phone, tablet, or any remote browser through a lightweight LSP bridge.
 
-Porta is a two-part system: a **proxy** that bridges your local Antigravity Language Server to the network, and a **web UI** (installable PWA) that gives you a mobile-friendly chat interface.
+Pocket Antigravity is a two-part system: a **proxy** that bridges your local Antigravity Language Server to the network, and a **web UI** (installable PWA) that gives you a mobile-friendly chat interface.
 
 <p align="center">
   <img src="docs/screenshot.png" alt="Porta — desktop and mobile" width="720">
@@ -63,9 +63,9 @@ remotely. Here's how Porta compares:
 | **Screen sharing** (VNC, RDP, Parsec) | Pixel stream        | High           | Noticeable                | Poor: tiny text, no touch UX | ✅          |
 | **SSH + port forwarding**             | Raw TCP             | Low            | Low                       | No UI: terminal only         | ✅          |
 | **Cloud IDE** (Codespaces, Gitpod)    | Full workspace      | N/A (cloud)    | Varies                    | Usable but heavy             | ❌          |
-| **Porta**                             | Structured LSP data | **Negligible** | **Real-time** (WebSocket) | **Native PWA**               | ✅          |
+| **Pocket Antigravity**                 | Structured LSP data | **Negligible** | **Real-time** (WebSocket) | **Native PWA**               | ✅          |
 
-Porta doesn't stream pixels or run your workspace in the cloud. It
+Pocket Antigravity doesn't stream pixels or run your workspace in the cloud. It
 relays structured conversation data through the Antigravity Language
 Server Protocol, so you get:
 
@@ -80,12 +80,12 @@ Server Protocol, so you get:
 Porta is a **chat interface**, not a full remote IDE. These
 constraints are inherent to its LSP-bridge architecture:
 
-- **Antigravity must be running**: Porta is a bridge, not a
+- **Antigravity must be running**: Pocket Antigravity is a bridge, not a
   standalone tool. No Antigravity instance → no data.
-- **Bounded by Antigravity**: Porta can only expose what the
+- **Bounded by Antigravity**: Pocket Antigravity can only expose what the
   Antigravity Language Server provides. If Antigravity doesn't support
-  a feature, Porta can't offer it either.
-- **No code editing or terminal**: Porta relays conversation-level
+  a feature, Pocket Antigravity can't offer it either.
+- **No code editing or terminal**: Pocket Antigravity relays conversation-level
   data only. Use your local editor or SSH for file operations.
 - **Single user**: The proxy connects to one local Antigravity
   Language Server. There is no multi-user or multi-tenant model.

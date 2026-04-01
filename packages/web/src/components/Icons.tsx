@@ -247,3 +247,51 @@ export const IconGear = ({ size = 16, className }: IconProps) =>
 
 export const IconChevronLeft = ({ size = 16, className }: IconProps) =>
   d(size, className, "m15 18-6-6 6-6");
+
+export const IconMic = ({ size = 16, className }: IconProps) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+    <line x1="12" x2="12" y1="19" y2="22" />
+  </svg>
+);
+
+export const IconMicOff = ({ size = 16, className }: IconProps) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <line x1="2" x2="22" y1="2" y2="22" />
+    <path d="M18.89 13.23A7.12 7.12 0 0 1 12 19a7 7 0 0 1-7-7v-2" />
+    <path d="M9 13a3 3 0 0 0 5.12-2.12" />
+    <path d="M15 9.34V5a3 3 0 0 0-5.94-.6" />
+    <line x1="12" x2="12" y1="19" y2="22" />
+  </svg>
+);
+
+export const IconVolume2 = ({ size = 16, className }: IconProps) =>
+  m(size, className, [
+    "M11 5L6 9H2v6h4l5 4V5z",
+    "M15.54 8.46a5 5 0 0 1 0 7.07",
+    "M19.07 4.93a10 10 0 0 1 0 14.14",
+  ]);
+
+export const IconVolumeX = ({ size = 16, className }: IconProps) =>
+  m(size, className, ["M11 5L6 9H2v6h4l5 4V5z", "M23 9l-6 6", "M17 9l6 6"]);

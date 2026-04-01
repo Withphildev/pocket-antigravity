@@ -134,15 +134,7 @@ export function useStepsStream(
         return;
       }
 
-      const apiBase = import.meta.env.VITE_API_BASE ?? "";
-      let url: string;
-      if (apiBase) {
-        const wsBase = apiBase.replace(/^http/, "ws");
-        url = `${wsBase}/api/conversations/${cascadeId}/ws`;
-      } else {
-        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        url = `${protocol}//${window.location.host}/api/conversations/${cascadeId}/ws`;
-      }
+      const url = api.getWebSocketUrl(cascadeId);
       const gen = genRef.current;
 
       try {

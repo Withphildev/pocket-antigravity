@@ -1,7 +1,7 @@
 {
-  "name": "Porta",
-  "short_name": "Porta",
-  "description": "Porta",
+  "name": "Pocket Antigravity",
+  "short_name": "Pocket AG",
+  "description": "Pocket Antigravity interface",
   "id": "/",
   "start_url": "/",
   "scope": "/",

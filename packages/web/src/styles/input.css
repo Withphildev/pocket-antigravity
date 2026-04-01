@@ -17,19 +17,39 @@
 }
 
 .chat-input-wrap {
-  max-width: 860px;
-  margin: 0 auto;
-  width: 100%;
+  position: relative;
+  background: rgba(var(--c-bg-surface), 0.5);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  padding: 12px 14px 10px;
-  min-height: 54px;
-  transition: border-color var(--transition-fast);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-glass);
+}
+
+.chat-input-context {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px 2px;
+  opacity: 0.8;
+}
+
+.context-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--accent-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--accent-primary);
+}
+
+.context-label {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  text-transform: lowercase;
 }
 
 .chat-input-wrap:focus-within {
@@ -157,6 +177,23 @@
 .chat-action-icon-btn:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+}
+
+.voice-input-btn.recording {
+  color: #ef4444; /* Modern red */
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+}
+
+.pulse-red {
+  animation: pulse-red 1.5s infinite;
+}
+
+@keyframes pulse-red {
+  0% { transform: scale(0.9); opacity: 0.7; filter: blur(0.5px); }
+  50% { transform: scale(1.15); opacity: 1; filter: blur(0); }
+  100% { transform: scale(0.9); opacity: 0.7; filter: blur(0.5px); }
 }
 
 /* ── Drag over ── */
@@ -295,17 +332,27 @@
 
 .model-selector-dropdown {
   position: absolute;
-  bottom: 100%;
-  left: 0;
-  margin-bottom: 4px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
-  min-width: 200px;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: rgba(var(--c-bg-surface), 0.85);
+  backdrop-filter: var(--glass-blur-heavy);
+  -webkit-backdrop-filter: var(--glass-blur-heavy);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-glass);
+  min-width: 240px;
+  max-width: calc(100vw - 32px);
+  max-height: 280px;
+  overflow-y: auto;
   width: max-content;
-  padding: 4px;
-  z-index: 100;
+  padding: 6px;
+  z-index: 1000;
+  animation: dropdown-pop 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+
+@keyframes dropdown-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .model-option {

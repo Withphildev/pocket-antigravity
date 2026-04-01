@@ -10,7 +10,7 @@ Only the latest release on `main` receives security fixes.
 
 ## Reporting a vulnerability
 
-If you discover a security vulnerability in Porta, **please do not open
+If you discover a security vulnerability in Pocket Antigravity, **please do not open
 a public issue.**
 
 Report it privately via

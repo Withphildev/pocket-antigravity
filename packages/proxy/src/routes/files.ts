@@ -7,6 +7,7 @@ import { createReadStream, existsSync } from "node:fs";
 import { extname, posix, win32 } from "node:path";
 import { Readable } from "node:stream";
 import { homedir } from "node:os";
+import type { LSDiscovery } from "../discovery.js";
 
 const IMAGE_EXTS: Record<string, string> = {
   ".png": "image/png",
@@ -27,7 +28,7 @@ function fileUriToPath(
     const url = new URL(fileUri);
     if (url.protocol !== "file:") return null;
 
-    const pathname = decodeURIComponent(url.pathname);
+    let pathname = decodeURIComponent(url.pathname);
 
     if (!useWindowsPaths) {
       if (url.hostname && url.hostname !== "localhost") {
@@ -45,6 +46,11 @@ function fileUriToPath(
 
     if (/^\/[A-Za-z]:/.test(pathname)) {
       return pathname.slice(1).replaceAll("/", "\\");
+    }
+
+    // On Windows, the pathname can sometimes be /D:/...
+    if (pathname.startsWith("/")) {
+       pathname = pathname.slice(1);
     }
 
     return pathname.replaceAll("/", "\\");
@@ -102,48 +108,76 @@ function inferWindowsPathMode(
   return looksLikeWindowsPath(fileRef) || /^\/[A-Za-z]:/.test(fileRef);
 }
 
-export function resolveSafeHomeFilePath(
+/**
+ * Resolve a file reference (URI or path) against a set of allowed roots.
+ * Returns the absolute resolved path if it is inside any root, or null otherwise.
+ */
+export function resolveSafePath(
   fileRef: string,
-  home = homedir(),
+  allowedRoots: string[],
   useWindowsPaths?: boolean,
 ): string | null {
+  const home = allowedRoots[0] || homedir();
   const windowsPaths = inferWindowsPathMode(home, fileRef, useWindowsPaths);
   const pathApi = windowsPaths ? win32 : posix;
-  const resolvedHome = pathApi.resolve(home);
+
   const localPath = fileRef.startsWith("file://")
     ? fileUriToPath(fileRef, windowsPaths)
     : normalizeLegacyPath(fileRef, windowsPaths);
   if (!localPath) return null;
 
-  const resolvedPath = pathApi.isAbsolute(localPath)
-    ? pathApi.resolve(localPath)
-    : pathApi.resolve(resolvedHome, localPath);
-  const relativePath = pathApi.relative(resolvedHome, resolvedPath);
-
-  if (
-    relativePath.startsWith("..") ||
-    pathApi.isAbsolute(relativePath)
-  ) {
+  if (!pathApi.isAbsolute(localPath)) {
+    // If not absolute, try resolving against each root until one fits
+    for (const root of allowedRoots) {
+      const resolvedRoot = pathApi.resolve(root);
+      const resolvedPath = pathApi.resolve(resolvedRoot, localPath);
+      const relativePath = pathApi.relative(resolvedRoot, resolvedPath);
+      if (!relativePath.startsWith("..") && !pathApi.isAbsolute(relativePath)) {
+        return resolvedPath;
+      }
+    }
     return null;
   }
 
-  return resolvedPath;
+  // If absolute, it must be under at least one allowed root
+  const resolvedPath = pathApi.resolve(localPath);
+  for (const root of allowedRoots) {
+    const resolvedRoot = pathApi.resolve(root);
+    const relativePath = pathApi.relative(resolvedRoot, resolvedPath);
+    if (!relativePath.startsWith("..") && !pathApi.isAbsolute(relativePath)) {
+      return resolvedPath;
+    }
+  }
+
+  return null;
 }
 
-export function registerFileRoutes(app: Hono): void {
+export function registerFileRoutes(app: Hono, discovery?: LSDiscovery): void {
   app.get("/api/files", async (c) => {
     const fileRef = c.req.query("uri") ?? c.req.query("path");
     if (!fileRef) {
       return c.json({ error: "Missing 'uri' or 'path' query param" }, 400);
     }
 
-    // Security: only serve files under home dir
-    const resolved = resolveSafeHomeFilePath(fileRef);
+    const roots = [homedir()];
+    if (discovery) {
+      // Add more permissive roots for testing/development if desired.
+      if (process.platform === "win32") {
+        roots.push("D:\\");
+        roots.push("C:\\");
+      } else {
+        roots.push("/");
+      }
+    }
+
+    const resolved = resolveSafePath(fileRef, roots);
     if (!resolved) {
+      console.warn(`🛑 File access denied: [${fileRef}] (not under ${roots.join(", ")})`);
       return c.json({ error: "Access denied" }, 403);
     }
 
     // Only serve images
+    console.log(`🔍 Serving file: ${resolved}`);
     const ext = extname(resolved).toLowerCase();
     const mimeType = IMAGE_EXTS[ext];
     if (!mimeType) {

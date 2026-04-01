@@ -21,8 +21,9 @@ import {
   CommandCard,
   CodeActionCard,
   FilePermissionCard,
-  getFilePermissionRequest,
 } from "./StepCards";
+import { getFilePermissionRequest } from "../utils/stepUtils";
+import { ReadAloudButton } from "./ReadAloudButton";
 import {
   IconCopy,
   IconCheck,
@@ -35,8 +36,10 @@ import {
   IconEye,
   IconMessageCircle,
   IconAlertTriangle,
+  IconLock,
 } from "./Icons";
 import type { ChatMessage } from "../types";
+import { getApiBase, getApiKey } from "../api/client";
 
 interface Props {
   cascadeId: string;
@@ -49,6 +52,11 @@ interface Props {
     absolutePathUri: string,
   ) => void;
   onCommandAction?: (
+    trajectoryId: string,
+    stepIndex: number,
+    approved: boolean,
+  ) => Promise<void>;
+  onCodeAction?: (
     trajectoryId: string,
     stepIndex: number,
     approved: boolean,
@@ -120,6 +128,9 @@ function SystemMessage({
   msg,
   onFilePermission,
   onCommandAction,
+  onCodeAction,
+  isWaiting,
+  onImageClick,
 }: {
   msg: ChatMessage;
   onFilePermission: (
@@ -134,47 +145,59 @@ function SystemMessage({
     stepIndex: number,
     approved: boolean,
   ) => Promise<void>;
+  onCodeAction?: (
+    trajectoryId: string,
+    stepIndex: number,
+    approved: boolean,
+  ) => Promise<void>;
+  isWaiting: boolean;
+  onImageClick: (src: string) => void;
 }) {
   const renderedContent = useMemo(
     () => renderMarkdown(msg.content ?? ""),
     [msg.content],
   );
 
+  const hasMedia = msg.media && msg.media.length > 0;
+
+  let body = null;
   if (msg.step) {
-    // File permission request — render dedicated card
     if (msg.type === "CORTEX_STEP_TYPE_FILE_PERMISSION") {
       const fpr = getFilePermissionRequest(msg.step);
       if (fpr) {
-        return (
-          <div className="message system">
-            <FilePermissionCard
-              step={msg.step}
-              permissionRequest={fpr}
-              onFilePermission={onFilePermission}
-            />
-          </div>
+        body = (
+          <FilePermissionCard
+            step={msg.step}
+            permissionRequest={fpr}
+            onFilePermission={onFilePermission}
+          />
         );
       }
-    }
-    if (msg.type === "CORTEX_STEP_TYPE_RUN_COMMAND") {
-      return (
-        <div className="message system">
-          <CommandCard step={msg.step} onCommandAction={onCommandAction} />
-        </div>
+    } else if (msg.type === "CORTEX_STEP_TYPE_RUN_COMMAND") {
+      body = (
+        <CommandCard
+          step={msg.step}
+          onCommandAction={onCommandAction}
+          isWaiting={isWaiting}
+        />
       );
-    }
-    if (msg.type === "CORTEX_STEP_TYPE_CODE_ACTION") {
-      return (
-        <div className="message system">
-          <CodeActionCard step={msg.step} />
-        </div>
+    } else if (msg.type === "CORTEX_STEP_TYPE_CODE_ACTION") {
+      body = (
+        <CodeActionCard
+          step={msg.step}
+          onCodeAction={onCodeAction}
+          isWaiting={isWaiting}
+        />
       );
     }
   }
 
-  return (
-    <div className="message system">
+  if (!body) {
+    body = (
       <div className="chat-block step-card info-card">
+        {hasMedia && (
+          <MediaThumbs media={msg.media!} onImageClick={onImageClick} />
+        )}
         <div className="step-card-header">
           {msg.icon && (
             <span className="step-card-icon">
@@ -187,17 +210,26 @@ function SystemMessage({
           />
         </div>
       </div>
-    </div>
-  );
+    );
+  } else if (hasMedia) {
+    // If it's a card but also has extracted media, place media above the card.
+    body = (
+      <>
+        <div className="chat-block" style={{ marginBottom: "8px" }}>
+          <MediaThumbs media={msg.media!} onImageClick={onImageClick} />
+        </div>
+        {body}
+      </>
+    );
+  }
+
+  return <div className="message system">{body}</div>;
 }
 
-interface MediaItem {
-  mimeType?: string;
-  inlineData?: string;
-  payload?: { case?: string; value?: string };
-}
 
-/** Render media thumbnails from a user message */
+
+
+/** Render media thumbnails from a user or assistant message */
 function MediaThumbs({
   media,
   onImageClick,
@@ -205,18 +237,34 @@ function MediaThumbs({
   media: unknown[];
   onImageClick?: (src: string) => void;
 }) {
+
+
   return (
     <div className="message-media">
       {media.map((m, i) => {
-        const item = m as MediaItem;
+        const item = m as any;
         const mimeType = item.mimeType ?? "image/png";
         const inlineData =
           item.inlineData ??
           (item.payload?.case === "inlineData"
             ? item.payload.value
             : undefined);
-        if (!inlineData) return null;
-        const src = `data:${mimeType};base64,${inlineData}`;
+
+
+        let src = "";
+        const fileRef = item.uri || item.fileUri;
+
+        if (inlineData) {
+          src = `data:${mimeType};base64,${inlineData}`;
+        } else if (fileRef) {
+          const apiKey = getApiKey();
+          const keyParam = apiKey ? `&key=${apiKey}` : "";
+          const apiBase = getApiBase();
+          src = `${apiBase}/api/files?uri=${encodeURIComponent(fileRef)}${keyParam}`;
+        }
+
+        if (!src) return null;
+
         return (
           <img
             key={i}
@@ -307,6 +355,9 @@ const MessageBubble = memo(
                 </button>
               )}
               <CopyButton text={msg.content} />
+              {msg.role === "assistant" && (
+                <ReadAloudButton text={msg.content} className="msg-action-btn" />
+              )}
             </div>
           )}
         </div>
@@ -381,6 +432,7 @@ export function ChatPanel({
   onRevert,
   onFilePermission,
   onCommandAction,
+  onCodeAction,
   onConfirmOptimistic,
   optimisticMessages = [],
   refreshKey = 0,
@@ -398,12 +450,15 @@ export function ChatPanel({
     loadingOlder,
     loadOlder,
     wsRunning,
+    error,
   } = useStepsStream(
     cascadeId,
     totalStepCount,
     onSidebarRefresh,
     isConversationRunning,
   );
+
+  const isLockedOut = error?.includes("401");
 
   // Soft re-fetch when refreshKey changes (e.g. after send)
   const prevKeyRef = useRef(refreshKey);
@@ -579,6 +634,33 @@ export function ChatPanel({
     }
   }, []);
 
+  if (isLockedOut) {
+    return (
+      <div className="chat-area">
+        <div className="chat-empty locked-out">
+          <div className="chat-empty-icon neon">
+            <IconLock size={48} />
+          </div>
+          <div className="chat-empty-text">Bridge Connection Locked</div>
+          <p style={{ color: "var(--text-secondary)", fontSize: "14px", textAlign: "center", maxWidth: "280px", marginBottom: "24px", lineHeight: "1.6" }}>
+            This mobile device is not authorized to access your Porta bridge. 
+            Please enter your API key to continue.
+          </p>
+          <button
+            className="auth-submit"
+            style={{ maxWidth: "200px" }}
+            onClick={() => {
+              // Trigger the Sidebar's unlock modal via global event
+              window.dispatchEvent(new CustomEvent("porta:open-unlock"));
+            }}
+          >
+            Enter API Key
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading && messages.length === 0) {
     return (
       <div className="chat-area">
@@ -633,6 +715,9 @@ export function ChatPanel({
                 msg={msg}
                 onFilePermission={onFilePermission}
                 onCommandAction={onCommandAction}
+                onCodeAction={onCodeAction}
+                isWaiting={wsRunning && i === messages.length - 1}
+                onImageClick={setLightboxSrc}
               />
             );
           }

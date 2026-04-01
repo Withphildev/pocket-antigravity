@@ -77,7 +77,11 @@ export function SettingsPanel({ settings, onUpdate, onBack }: Props) {
   );
 
   const handleReset = useCallback(() => {
-    onUpdate({ defaultModel: null, defaultPlannerType: "conversational" });
+    onUpdate({ 
+      defaultModel: null, 
+      defaultPlannerType: "conversational",
+      theme: "system"
+    });
     flashSaved();
   }, [onUpdate, flashSaved]);
 
@@ -147,6 +151,31 @@ export function SettingsPanel({ settings, onUpdate, onBack }: Props) {
             >
               <option value="conversational">Fast</option>
               <option value="planning">Plan</option>
+            </select>
+          </div>
+        </div>
+
+        {/* ── Appearance ── */}
+        <div className="settings-section">
+          <h2 className="settings-section-title">Appearance</h2>
+          <div className="settings-row">
+            <div className="settings-row-info">
+              <span className="settings-row-label">Theme</span>
+              <span className="settings-row-desc">
+                Choose between light mode, dark mode, or follow your system preference.
+              </span>
+            </div>
+            <select
+              className="settings-select"
+              value={settings.theme ?? "system"}
+              onChange={(e) => {
+                onUpdate({ theme: e.target.value as any });
+                flashSaved();
+              }}
+            >
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
             </select>
           </div>
         </div>
