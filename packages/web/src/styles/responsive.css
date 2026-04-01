@@ -1,0 +1,396 @@
+/* ── Responsive: Tablet ── */
+
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 240px;
+  }
+}
+
+/* ── Responsive: Mobile (iPhone SE = 375px, SE 1st gen = 320px) ── */
+
+@media (max-width: 480px) {
+  :root {
+    --sidebar-width: 80vw;
+    --header-height: 44px;
+  }
+
+  /* ── Sidebar becomes a half-width drawer overlay ── */
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 900;
+    width: 80vw;
+    min-width: 80vw;
+    max-width: 320px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-subtle);
+    transform: translateX(0);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar.sidebar-collapsed {
+    width: 80vw;
+    min-width: 80vw;
+    max-width: 320px;
+    transform: translateX(-100%);
+    pointer-events: none;
+  }
+
+  /* Sidebar backdrop: real element so it can receive tap/click */
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 899;
+    background: rgba(0, 0, 0, 0.5);
+    animation: fade-in 200ms ease-out;
+  }
+
+  /* Hide the collapsed icon strip on mobile */
+  .sidebar-collapsed .sidebar-collapsed-icons,
+  .sidebar-collapsed .sidebar-collapsed-bottom {
+    display: none;
+  }
+
+  /* ── Mobile header hamburger ── */
+
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  /* ── Main header ── */
+
+  .main-header {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .main-header-title {
+    font-size: 13px;
+  }
+
+  /* ── Chat area: reduced padding ── */
+
+  .chat-area {
+    padding: 8px 0;
+    gap: 4px;
+  }
+
+  .chat-area-inner {
+    padding: 0 12px;
+    gap: 4px;
+  }
+
+  /* ── Message bubbles ── */
+
+  .message-body {
+    padding: 4px 10px;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .message.user .message-body {
+    max-width: 85%;
+  }
+
+  .message-body pre {
+    padding: 8px 10px;
+    font-size: 11px;
+    margin: 6px -4px;
+    border-radius: var(--radius-sm);
+  }
+
+  .message-body code {
+    font-size: 11px;
+    padding: 1px 4px;
+  }
+
+  .message-body h1 {
+    font-size: 16px;
+  }
+  .message-body h2 {
+    font-size: 14px;
+  }
+  .message-body h3 {
+    font-size: 13px;
+  }
+  .message-body h4 {
+    font-size: 12px;
+  }
+
+  .message-body table {
+    font-size: 11px;
+    display: block;
+    overflow-x: auto;
+  }
+
+  .message-body th,
+  .message-body td {
+    padding: 4px 6px;
+  }
+
+  .message-body img {
+    max-height: 250px;
+  }
+
+  .message-media-thumb {
+    max-width: 140px;
+    max-height: 140px;
+  }
+
+  .msg-action-btn {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Scroll-to-bottom floating button */
+  .scroll-to-bottom-btn {
+    display: flex;
+    position: sticky;
+    bottom: 8px;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    max-width: 36px;
+    max-height: 36px;
+    margin: -36px auto 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(30, 33, 40, 0.95);
+    color: var(--text-secondary);
+    font-size: 16px;
+    line-height: 1;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    z-index: 10;
+    padding: 0;
+    animation: fade-in 150ms ease-out;
+  }
+
+  /* ── Chat input area ── */
+
+  .chat-input-area {
+    padding: 6px 10px 12px;
+  }
+
+  .model-selector-btn {
+    width: auto;
+    min-width: 0;
+    max-width: 140px;
+    padding: 8px 12px 8px 14px;
+    font-size: 11px;
+    border-radius: var(--radius-md);
+  }
+
+  .chat-send-btn,
+  .chat-stop-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+    border-radius: var(--radius-md);
+  }
+
+  .chat-action-icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .chat-input-wrap {
+    padding: 10px 10px 8px;
+    border-radius: var(--radius-md);
+    gap: 10px;
+  }
+
+  .chat-input {
+    font-size: 14px; /* keep 14px minimum for iOS to prevent zoom on focus */
+    max-height: 120px;
+  }
+
+  /* ── Step cards ── */
+
+  .step-card-header {
+    padding: 6px 10px;
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  .step-card-command {
+    font-size: 11px;
+  }
+
+  .step-card-output {
+    padding: 8px 10px;
+    font-size: 10px;
+    max-height: 200px;
+  }
+
+  .step-card-cwd {
+    font-size: 9px;
+    padding: 0 10px 4px;
+  }
+
+  .step-card-file {
+    font-size: 10px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .file-permission-actions,
+  .command-action-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .command-action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .command-action-btn,
+  .file-permission-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 13.5px;
+  }
+
+  .command-waiting-label {
+    margin-bottom: 4px;
+    justify-content: center;
+  }
+
+  /* ── Diff rendering ── */
+
+  .diff-content {
+    max-height: 250px;
+    font-size: 10px;
+  }
+
+  .diff-file-header {
+    font-size: 10px;
+    padding: 4px 10px;
+  }
+
+  .diff-line {
+    padding: 0 8px;
+  }
+
+  /* ── Thinking block ── */
+
+  .thinking-content {
+    font-size: 11px;
+    max-height: 250px;
+    padding: 6px 8px;
+  }
+
+  /* ── Chat empty state ── */
+
+  .chat-empty-text {
+    font-size: 14px;
+  }
+
+  .chat-empty-icon svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* ── Search modal ── */
+
+  .search-modal {
+    width: 95vw;
+    max-height: 80vh;
+    border-radius: var(--radius-md);
+  }
+
+  .search-modal-overlay {
+    padding-top: 8vh;
+  }
+
+  /* ── Modal dialog ── */
+
+  .modal-card {
+    padding: 24px 20px;
+    max-width: 92vw;
+  }
+
+  .modal-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  .modal-title {
+    font-size: 16px;
+  }
+
+  .modal-body {
+    font-size: 13px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .modal-btn {
+    width: 100%;
+    padding: 10px 16px;
+  }
+
+  /* ── Planner type selector ── */
+
+  .model-selector-dropdown {
+    min-width: 180px;
+  }
+
+  .model-option {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .model-option-meta {
+    font-size: 10px;
+  }
+
+  /* ── Sidebar list items: larger touch targets ── */
+
+  .sidebar-item {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .workspace-group-items .sidebar-item {
+    padding: 10px 14px;
+  }
+
+  .sidebar-action-btn {
+    padding: 10px 12px;
+  }
+
+  /* ── Attachment previews ── */
+
+  .attachment-previews {
+    margin-bottom: 4px;
+    gap: 6px;
+  }
+
+  .attachment-thumb {
+    width: 52px;
+    height: 52px;
+  }
+
+  .attachment-remove {
+    opacity: 1; /* always visible on touch */
+  }
+}

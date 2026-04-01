@@ -1,0 +1,45 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { api } from "../api/client";
+
+describe("api client", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("parses JSON responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            status: "ok",
+            proxy: { port: 3100, uptime: 1 },
+            languageServers: [],
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      ),
+    );
+
+    await expect(api.health()).resolves.toMatchObject({ status: "ok" });
+  });
+
+  it("throws a clear error when the API returns HTML", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("<!doctype html><html><body>Not JSON</body></html>", {
+          status: 200,
+          headers: { "Content-Type": "text/html" },
+        }),
+      ),
+    );
+
+    await expect(api.health()).rejects.toThrow(
+      "API returned non-JSON for /api/health: <!doctype html><html><body>Not JSON</body></html>",
+    );
+  });
+});

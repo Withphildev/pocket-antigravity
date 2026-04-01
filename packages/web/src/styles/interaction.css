@@ -1,0 +1,186 @@
+/* ── Pointer-device hover effects ──────────────────────────────────────────────
+   All interactive :hover rules live here. Touch devices skip this entire
+   section via the media query, preventing "sticky hover" and double-tap issues.
+   ⚠ Do NOT add :hover rules for clickable elements outside this block. ──── */
+
+@media (hover: hover) {
+  /* Sidebar */
+  .sidebar-icon-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .sidebar-project-tab:hover {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+  }
+
+  .sidebar-action-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .sidebar-item:hover {
+    background: var(--bg-hover);
+  }
+
+  .sidebar-item.dimmed:hover {
+    opacity: 0.75;
+  }
+
+  .sidebar-item:hover .item-indicator,
+  .sidebar-item:hover .item-dot {
+    display: none;
+  }
+
+  .sidebar-item:hover .sidebar-item-menu-btn {
+    display: flex;
+    opacity: 0.6;
+  }
+
+  .sidebar-item-menu-btn:hover {
+    opacity: 1 !important;
+    background: var(--bg-hover);
+    color: var(--text-primary);
+  }
+
+  .workspace-group-header:hover {
+    color: var(--text-primary);
+  }
+
+  .see-all-btn:hover {
+    color: var(--text-secondary);
+  }
+
+  /* Context menu */
+  .context-menu-item:hover {
+    background: rgb(var(--c-lift) / 0.05);
+  }
+
+  .context-menu-item.danger:hover {
+    background: rgb(var(--c-error) / 0.06);
+  }
+
+  /* Search results */
+  .search-result-item:hover {
+    background: var(--bg-hover);
+  }
+
+  /* Code copy button */
+  .code-copy-btn:hover {
+    opacity: 1;
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+
+  /* Message actions */
+
+  .msg-action-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+  }
+
+  /* Media thumbnails */
+  .message-media-thumb:hover {
+    transform: scale(1.02);
+  }
+
+  /* Step cards */
+  .step-card-header:hover {
+    background: var(--bg-hover);
+  }
+
+  /* Command cards: no hover highlight */
+  .command-card .step-card-header:hover {
+    background: transparent;
+  }
+}
+
+/* ── Header Breadcrumb Interaction ── */
+
+.main-header-title {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.main-header-title:active {
+  opacity: 0.7;
+}
+
+.breadcrumb-root-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s;
+}
+
+.breadcrumb-root-container:hover {
+  background: var(--bg-hover);
+}
+
+.breadcrumb-root {
+  font-weight: 700;
+  color: var(--text-accent);
+}
+
+.breadcrumb-sep {
+  opacity: 0.3;
+  margin: 0 2px;
+}
+
+.breadcrumb-leaf {
+  font-weight: 500;
+  color: var(--text-primary);
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s;
+}
+
+.breadcrumb-leaf:hover {
+  background: var(--bg-hover);
+}
+
+/* ── Header Workspace Selection ── */
+
+.main-header-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 4px;
+}
+
+.header-workspace-select {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.header-workspace-select .model-selector-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  margin-left: -8px;
+  font-weight: 700;
+  color: var(--text-accent);
+  font-size: 14px;
+}
+
+.header-workspace-select .model-selector-btn:hover {
+  background: var(--bg-hover);
+}
+
+.header-workspace-select .model-selector-label {
+  gap: 6px;
+}
+
+.header-workspace-select .model-selector-dropdown {
+  position: fixed;
+  top: var(--header-height);
+  left: 56px;
+  min-width: 200px;
+}
