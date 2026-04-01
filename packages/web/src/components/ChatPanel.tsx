@@ -237,7 +237,8 @@ function MediaThumbs({
   media: unknown[];
   onImageClick?: (src: string) => void;
 }) {
-
+  const apiBase = getApiBase();
+  const apiKey = getApiKey();
 
   return (
     <div className="message-media">
@@ -250,29 +251,35 @@ function MediaThumbs({
             ? item.payload.value
             : undefined);
 
-
         let src = "";
         const fileRef = item.uri || item.fileUri;
 
         if (inlineData) {
           src = `data:${mimeType};base64,${inlineData}`;
         } else if (fileRef) {
-          const apiKey = getApiKey();
           const keyParam = apiKey ? `&key=${apiKey}` : "";
-          const apiBase = getApiBase();
           src = `${apiBase}/api/files?uri=${encodeURIComponent(fileRef)}${keyParam}`;
         }
 
         if (!src) return null;
 
+        // Use fileUri or index as a fallback for key
+        const uniqueKey = item.fileUri || item.uri || `media-${i}`;
+
         return (
-          <img
-            key={i}
-            src={src}
-            alt="attachment"
-            className="message-media-thumb"
-            onClick={() => onImageClick?.(src)}
-          />
+          <div key={uniqueKey} className="media-thumb-container">
+            <img
+              src={src}
+              alt="attachment"
+              className="message-media-thumb"
+              loading="lazy"
+              onClick={() => onImageClick?.(src)}
+              onError={() => {
+                console.error("Media failed to load:", src);
+                // Optionally show a more descriptive placeholder if it fails after initial show
+              }}
+            />
+          </div>
         );
       })}
     </div>
